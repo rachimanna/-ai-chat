@@ -11,8 +11,6 @@ on:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 concurrency:
   group: build-${{ github.ref }}
@@ -100,43 +98,6 @@ jobs:
           name: ai-chat-ios-ipa-unsigned
           path: build/ai-chat-unsigned.ipa
 
-  # Веб-версия на GitHub Pages: на iPhone открывается в Safari и
-  # добавляется на экран «Домой» — без компьютера и без Apple ID.
-  web:
-    name: Веб-версия (GitHub Pages)
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          flutter-version: 3.47.5
-          cache: true
-
-      - run: flutter pub get
-
-      - name: Сборка веб-версии
-        run: >
-          flutter build web --release
-          --base-href "/${{ github.event.repository.name }}/"
-          --build-number=$BUILD_NUMBER
-
-      - uses: actions/configure-pages@v5
-        with:
-          enablement: true
-
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: build/web
-
-      - id: deploy
-        uses: actions/deploy-pages@v4
-
   release:
     name: Публикация в Releases
     needs: [android, ios]
@@ -157,6 +118,5 @@ jobs:
           make_latest: 'true'
           body: |
             **Android:** скачайте `ai-chat.apk` на телефон и откройте его.
-            **iPhone без компьютера:** откройте в Safari https://rachimanna.github.io/-ai-chat/ → «Поделиться» → «На экран „Домой“».
-            **iPhone через компьютер:** скачайте `ai-chat-unsigned.ipa` и установите через Sideloadly.
+            **iPhone:** скачайте `ai-chat-unsigned.ipa` и установите через SideStore или Sideloadly.
           files: dist/*

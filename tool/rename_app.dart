@@ -31,24 +31,6 @@ void main(List<String> args) {
       (m) => '${m[1]}$xmlName${m[2]}',
     );
   }
-  _replace(
-    'web/index.html',
-    RegExp(r'<title>[^<]*</title>'),
-    '<title>$xmlName</title>',
-  );
-  _replace(
-    'web/index.html',
-    RegExp(r'(apple-mobile-web-app-title" content=")[^"]*(")'),
-    null,
-    (m) => '${m[1]}$xmlName${m[2]}',
-  );
-  final jsonName = name.replaceAll(r'\', r'\\').replaceAll('"', r'\"');
-  _replace(
-    'web/manifest.json',
-    RegExp(r'"(short_name|name)": "(?:[^"\\]|\\.)*"'),
-    null,
-    (m) => '"${m[1]}": "$jsonName"',
-  );
   final dartName = name.replaceAll(r'\', r'\\').replaceAll("'", r"\'");
   _replace(
     'lib/app_config.dart',
