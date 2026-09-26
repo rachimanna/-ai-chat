@@ -1,7 +1,11 @@
 // Меняет название приложения (под иконкой и внутри приложения).
 //
-// Использование (из папки ai_chat):
-//   dart run tool/rename_app.dart "Моё название"
+// Использование:
+//   dart run tool/rename_app.dart "Моё название" ["iOS name"]
+//
+// На iPhone название должно быть латиницей (иначе SideStore/Apple выдают
+// ошибку «invalid value for appIdName»), поэтому для iOS можно указать
+// отдельное имя вторым аргументом. По умолчанию — «AI Chat».
 import 'dart:io';
 
 void main(List<String> args) {
@@ -23,12 +27,17 @@ void main(List<String> args) {
     RegExp(r'android:label="[^"]*"'),
     'android:label="$xmlName"',
   );
+  final iosName = args.length > 1
+      ? args[1].trim()
+      : RegExp(r'^[\x20-\x7E]+$').hasMatch(name)
+      ? xmlName
+      : 'AI Chat';
   for (final key in ['CFBundleDisplayName', 'CFBundleName']) {
     _replace(
       'ios/Runner/Info.plist',
       RegExp('(<key>$key</key>\\s*<string>)[^<]*(</string>)'),
       null,
-      (m) => '${m[1]}$xmlName${m[2]}',
+      (m) => '${m[1]}$iosName${m[2]}',
     );
   }
   final dartName = name.replaceAll(r'\', r'\\').replaceAll("'", r"\'");
