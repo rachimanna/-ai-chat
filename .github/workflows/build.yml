@@ -1,0 +1,85 @@
+name: Сборка ИИ Чат (APK + IPA)
+
+on:
+  push:
+    branches:
+      - '**'
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  android:
+    name: Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.5
+          cache: true
+
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+
+      - name: Сборка релизного APK
+        run: flutter build apk --release
+
+      - name: Переименование файла
+        run: cp build/app/outputs/flutter-apk/app-release.apk build/ai-chat.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ai-chat-android-apk
+          path: build/ai-chat.apk
+
+      - name: Публикация в Releases (для тегов v*)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/ai-chat.apk
+
+  ios:
+    name: iOS IPA (без подписи)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.5
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Сборка iOS без подписи
+        run: flutter build ios --release --no-codesign
+
+      - name: Упаковка в IPA
+        run: |
+          mkdir -p build/ipa/Payload
+          cp -R build/ios/iphoneos/Runner.app build/ipa/Payload/
+          cd build/ipa && zip -qr ../ai-chat-unsigned.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ai-chat-ios-ipa-unsigned
+          path: build/ai-chat-unsigned.ipa
+
+      - name: Публикация в Releases (для тегов v*)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/ai-chat-unsigned.ipa
