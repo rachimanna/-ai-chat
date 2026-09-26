@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../theme/app_theme.dart';
 
@@ -22,7 +24,28 @@ class ChatInput extends StatefulWidget {
 
 class _ChatInputState extends State<ChatInput> {
   final _controller = TextEditingController();
-  final _focusNode = FocusNode();
+  late final _focusNode = FocusNode(onKeyEvent: _onKey);
+
+  static bool get _isDesktop => switch (defaultTargetPlatform) {
+    TargetPlatform.windows ||
+    TargetPlatform.macOS ||
+    TargetPlatform.linux => true,
+    _ => false,
+  };
+
+  /// На ПК: Enter — отправить, Shift+Enter — новая строка.
+  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    if (!_isDesktop || event is! KeyDownEvent) return KeyEventResult.ignored;
+    final isEnter =
+        event.logicalKey == LogicalKeyboardKey.enter ||
+        event.logicalKey == LogicalKeyboardKey.numpadEnter;
+    if (!isEnter || HardwareKeyboard.instance.isShiftPressed) {
+      return KeyEventResult.ignored;
+    }
+    _send();
+    return KeyEventResult.handled;
+  }
+
   bool _hasText = false;
 
   @override
@@ -79,13 +102,15 @@ class _ChatInputState extends State<ChatInput> {
                     fontSize: 16,
                     height: 1.4,
                   ),
-                  decoration: const InputDecoration(
-                    hintText: 'Сообщение',
+                  decoration: InputDecoration(
+                    hintText: _isDesktop
+                        ? 'Сообщение · Shift+Enter — новая строка'
+                        : 'Сообщение',
                     filled: false,
                     border: InputBorder.none,
                     enabledBorder: InputBorder.none,
                     focusedBorder: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
                     isDense: true,
                   ),
                 ),

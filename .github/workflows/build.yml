@@ -1,4 +1,4 @@
-name: Сборка ИИ Чат (APK + IPA)
+name: Сборка ИИ Чат (Android, iOS, Windows, macOS)
 
 # Каждый push в main собирает APK и IPA и публикует их в Releases.
 # Приложение проверяет обновления по номеру сборки (github.run_number).
@@ -98,10 +98,63 @@ jobs:
           name: ai-chat-ios-ipa-unsigned
           path: build/ai-chat-unsigned.ipa
 
+  windows:
+    name: Windows (ПК)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.5
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Сборка для Windows
+        run: flutter build windows --release --build-number=${{ github.run_number }}
+
+      - name: Упаковка в zip
+        shell: pwsh
+        run: Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath build/ai-chat-windows.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ai-chat-windows
+          path: build/ai-chat-windows.zip
+
+  macos:
+    name: macOS (ПК)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.5
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Сборка для macOS
+        run: flutter build macos --release --build-number=$BUILD_NUMBER
+
+      - name: Упаковка в zip
+        run: |
+          cd build/macos/Build/Products/Release
+          ditto -c -k --keepParent "AI Chat.app" "$GITHUB_WORKSPACE/build/ai-chat-macos.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ai-chat-macos
+          path: build/ai-chat-macos.zip
+
   release:
     name: Публикация в Releases
-    needs: [android, ios]
-    # iOS может упасть — APK всё равно публикуем.
+    needs: [android, ios, windows, macos]
+    # Если iOS или ПК-сборка упадёт — APK всё равно публикуем.
     if: ${{ always() && github.ref == 'refs/heads/main' && needs.android.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
@@ -119,4 +172,6 @@ jobs:
           body: |
             **Android:** скачайте `ai-chat.apk` на телефон и откройте его.
             **iPhone:** скачайте `ai-chat-unsigned.ipa` и установите через SideStore или Sideloadly.
+            **Windows:** скачайте `ai-chat-windows.zip`, распакуйте и запустите `ai_chat.exe`.
+            **Mac:** скачайте `ai-chat-macos.zip`, распакуйте, перенесите «AI Chat» в «Программы»; первый запуск — правой кнопкой → «Открыть».
           files: dist/*

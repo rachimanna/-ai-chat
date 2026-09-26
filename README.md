@@ -41,6 +41,12 @@ assets/icon/                — иконка приложения
   [Releases](https://github.com/rachimanna/-ai-chat/releases/latest) прямо на телефон и откройте.
 - **iPhone:** `ai-chat-unsigned.ipa` из Releases через SideStore или Sideloadly
   (подпись бесплатным Apple ID действует 7 дней).
+- **Windows:** `ai-chat-windows.zip` — распакуйте и запустите `ai_chat.exe`.
+- **Mac:** `ai-chat-macos.zip` — распакуйте, перенесите «AI Chat» в «Программы»,
+  первый запуск — правой кнопкой → «Открыть».
+
+На широком экране (ПК, планшет) список чатов всегда открыт слева, сообщения
+идут колонкой по центру, Enter отправляет сообщение, Shift+Enter — новая строка.
 
 ## Как получить бесплатный ключ Gemini
 

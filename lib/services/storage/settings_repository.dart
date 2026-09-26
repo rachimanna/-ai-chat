@@ -16,7 +16,10 @@ class SettingsRepository {
 
   static Future<SettingsRepository> open() async => SettingsRepository(
     await Hive.openBox<String>(boxName),
-    const FlutterSecureStorage(),
+    const FlutterSecureStorage(
+      // Обычная связка ключей macOS: работает без подписи разработчика.
+      mOptions: MacOsOptions(usesDataProtectionKeychain: false),
+    ),
   );
 
   static String _keyName(AiProviderType p) => 'api_key_${p.name}';
@@ -55,10 +58,14 @@ class SettingsRepository {
     });
     for (final p in AiProviderType.values) {
       final key = s.keyFor(p).trim();
-      if (key.isEmpty) {
-        await _secure.delete(key: _keyName(p));
-      } else {
-        await _secure.write(key: _keyName(p), value: key);
+      try {
+        if (key.isEmpty) {
+          await _secure.delete(key: _keyName(p));
+        } else {
+          await _secure.write(key: _keyName(p), value: key);
+        }
+      } catch (_) {
+        // Защищённое хранилище недоступно — ключ работает до перезапуска.
       }
     }
   }

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -15,6 +16,13 @@ class UpdateSection extends StatefulWidget {
 }
 
 class _UpdateSectionState extends State<UpdateSection> {
+  static bool get _isDesktop => switch (defaultTargetPlatform) {
+    TargetPlatform.windows ||
+    TargetPlatform.macOS ||
+    TargetPlatform.linux => true,
+    _ => false,
+  };
+
   String _version = '';
   bool _checking = false;
 
@@ -55,9 +63,9 @@ class _UpdateSectionState extends State<UpdateSection> {
       builder: (context) => AlertDialog(
         title: const Text('Доступно обновление'),
         content: Text(
-          '${info.version}\n\n'
-          'Нажмите «Скачать», откройте загруженный файл и установите его '
-          'поверх текущей версии — чаты и настройки сохранятся.',
+          '${info.version}\n\n${_isDesktop ? 'Нажмите «Скачать», распакуйте архив и замените им старую '
+                    'папку с приложением — чаты и настройки сохранятся.' : 'Нажмите «Скачать», откройте загруженный файл и установите его '
+                    'поверх текущей версии — чаты и настройки сохранятся.'}',
         ),
         actions: [
           TextButton(

@@ -7,9 +7,20 @@ import '../providers/chat_controller.dart';
 import '../screens/settings_screen.dart';
 import '../theme/app_theme.dart';
 
+/// Закрывает выдвижное меню, если оно открыто (на ПК панель постоянная).
+void _closeDrawer(BuildContext context) {
+  final scaffold = Scaffold.maybeOf(context);
+  if (scaffold != null && scaffold.isDrawerOpen) scaffold.closeDrawer();
+}
+
 /// Боковое меню: новый чат, список чатов, переименование, удаление, настройки.
+///
+/// На телефоне — выдвижное (Drawer), на широком экране — постоянная панель.
 class ChatDrawer extends ConsumerWidget {
-  const ChatDrawer({super.key});
+  const ChatDrawer({super.key, this.permanent = false});
+
+  /// Постоянная боковая панель (ПК, планшет).
+  final bool permanent;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -19,86 +30,90 @@ class ChatDrawer extends ConsumerWidget {
     );
     final controller = ref.read(chatControllerProvider.notifier);
 
+    final content = SafeArea(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 12, 8),
+            child: Text(
+              AppConfig.appName,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: AppColors.text,
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            child: _DrawerButton(
+              icon: Icons.edit_square,
+              label: 'Новый чат',
+              onTap: () {
+                controller.newChat();
+                _closeDrawer(context);
+              },
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(24, 16, 16, 6),
+            child: Text(
+              'Чаты',
+              style: TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Expanded(
+            child: chats.isEmpty
+                ? const Center(
+                    child: Text(
+                      'Здесь появятся ваши чаты',
+                      style: TextStyle(color: AppColors.textMuted),
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    physics: const BouncingScrollPhysics(
+                      parent: AlwaysScrollableScrollPhysics(),
+                    ),
+                    itemCount: chats.length,
+                    itemBuilder: (context, i) => _ChatTile(
+                      key: ValueKey(chats[i].id),
+                      chat: chats[i],
+                      selected: chats[i].id == currentId,
+                    ),
+                  ),
+          ),
+          const Divider(height: 1),
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: _DrawerButton(
+              icon: Icons.settings_outlined,
+              label: 'Настройки',
+              onTap: () {
+                _closeDrawer(context);
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const SettingsScreen(),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (permanent) {
+      return Container(width: 280, color: AppColors.drawer, child: content);
+    }
     return Drawer(
       width: MediaQuery.sizeOf(context).width * 0.82,
-      child: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 12, 8),
-              child: Text(
-                AppConfig.appName,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.text,
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              child: _DrawerButton(
-                icon: Icons.edit_square,
-                label: 'Новый чат',
-                onTap: () {
-                  controller.newChat();
-                  Navigator.of(context).pop();
-                },
-              ),
-            ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(24, 16, 16, 6),
-              child: Text(
-                'Чаты',
-                style: TextStyle(
-                  color: AppColors.textMuted,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            Expanded(
-              child: chats.isEmpty
-                  ? const Center(
-                      child: Text(
-                        'Здесь появятся ваши чаты',
-                        style: TextStyle(color: AppColors.textMuted),
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      physics: const BouncingScrollPhysics(
-                        parent: AlwaysScrollableScrollPhysics(),
-                      ),
-                      itemCount: chats.length,
-                      itemBuilder: (context, i) => _ChatTile(
-                        key: ValueKey(chats[i].id),
-                        chat: chats[i],
-                        selected: chats[i].id == currentId,
-                      ),
-                    ),
-            ),
-            const Divider(height: 1),
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: _DrawerButton(
-                icon: Icons.settings_outlined,
-                label: 'Настройки',
-                onTap: () {
-                  Navigator.of(context)
-                    ..pop()
-                    ..push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const SettingsScreen(),
-                      ),
-                    );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
+      child: content,
     );
   }
 }
@@ -160,7 +175,7 @@ class _ChatTile extends ConsumerWidget {
         child: InkWell(
           onTap: () {
             controller.selectChat(chat.id);
-            Navigator.of(context).pop();
+            _closeDrawer(context);
           },
           onLongPress: () => _showMenu(context, ref),
           child: Padding(

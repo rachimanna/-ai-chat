@@ -14,6 +14,12 @@ import '../widgets/message_tile.dart';
 import '../widgets/welcome_view.dart';
 import 'settings_screen.dart';
 
+/// Ширина экрана, начиная с которой меню чатов всегда открыто (ПК, планшет).
+const _wideLayoutBreakpoint = 900.0;
+
+/// Максимальная ширина колонки с сообщениями на большом экране.
+const _contentMaxWidth = 820.0;
+
 class ChatScreen extends ConsumerWidget {
   const ChatScreen({super.key});
 
@@ -30,18 +36,22 @@ class ChatScreen extends ConsumerWidget {
     );
     final settings = ref.watch(settingsProvider);
     final controller = ref.read(chatControllerProvider.notifier);
+    final wide = MediaQuery.sizeOf(context).width >= _wideLayoutBreakpoint;
 
-    return Scaffold(
-      drawer: const ChatDrawer(),
+    final scaffold = Scaffold(
+      drawer: wide ? null : const ChatDrawer(),
       drawerEdgeDragWidth: 40,
       appBar: AppBar(
-        leading: Builder(
-          builder: (context) => IconButton(
-            tooltip: 'Меню',
-            icon: const Icon(Icons.menu_rounded),
-            onPressed: () => Scaffold.of(context).openDrawer(),
-          ),
-        ),
+        automaticallyImplyLeading: false,
+        leading: wide
+            ? null
+            : Builder(
+                builder: (context) => IconButton(
+                  tooltip: 'Меню',
+                  icon: const Icon(Icons.menu_rounded),
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                ),
+              ),
         title: AnimatedSwitcher(
           duration: const Duration(milliseconds: 250),
           child: Column(
@@ -83,11 +93,18 @@ class ChatScreen extends ConsumerWidget {
                 switchInCurve: Curves.easeOut,
                 switchOutCurve: Curves.easeIn,
                 child: chat == null || chat.isEmpty
-                    ? WelcomeView(
+                    ? Center(
                         key: const ValueKey('welcome'),
-                        showKeyHint: !settings.hasApiKey,
-                        onOpenSettings: () => _openSettings(context),
-                        onSuggestion: controller.sendMessage,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(
+                            maxWidth: _contentMaxWidth,
+                          ),
+                          child: WelcomeView(
+                            showKeyHint: !settings.hasApiKey,
+                            onOpenSettings: () => _openSettings(context),
+                            onSuggestion: controller.sendMessage,
+                          ),
+                        ),
                       )
                     : _MessageList(
                         key: ValueKey(chat.id),
@@ -98,13 +115,27 @@ class ChatScreen extends ConsumerWidget {
               ),
             ),
           ),
-          ChatInput(
-            isGenerating: isGenerating,
-            onSend: controller.sendMessage,
-            onStop: controller.stopGeneration,
+          Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
+              child: ChatInput(
+                isGenerating: isGenerating,
+                onSend: controller.sendMessage,
+                onStop: controller.stopGeneration,
+              ),
+            ),
           ),
         ],
       ),
+    );
+
+    if (!wide) return scaffold;
+    return Row(
+      children: [
+        const ChatDrawer(permanent: true),
+        const VerticalDivider(width: 1, thickness: 1),
+        Expanded(child: scaffold),
+      ],
     );
   }
 }
@@ -178,28 +209,38 @@ class _MessageListState extends ConsumerState<_MessageList> {
       children: [
         // reverse: true — список «прилипает» к низу, и новые токены
         // не требуют ручной прокрутки.
-        ListView.builder(
-          controller: _scroll,
-          reverse: true,
-          physics: const BouncingScrollPhysics(
-            parent: AlwaysScrollableScrollPhysics(),
-          ),
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          padding: const EdgeInsets.only(top: 8, bottom: 12),
-          itemCount: messages.length + extra,
-          itemBuilder: (context, index) {
-            if (isStreamingHere && index == 0) {
-              return const _StreamingMessage(key: ValueKey('streaming'));
-            }
-            final i = lastIndex - (index - extra);
-            final m = messages[i];
-            return MessageTile(
-              key: ValueKey(m.id),
-              message: m,
-              animate:
-                  m.isUser &&
-                  now.difference(m.createdAt) < const Duration(seconds: 2),
-              onRetry: i == lastIndex && m.hasError ? widget.onRetry : null,
+        LayoutBuilder(
+          builder: (context, constraints) {
+            // На широком экране сообщения — колонкой по центру,
+            // а прокрутка колёсиком работает по всей ширине.
+            final side = ((constraints.maxWidth - _contentMaxWidth) / 2).clamp(
+              0.0,
+              double.infinity,
+            );
+            return ListView.builder(
+              controller: _scroll,
+              reverse: true,
+              physics: const BouncingScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics(),
+              ),
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: EdgeInsets.fromLTRB(side, 8, side, 12),
+              itemCount: messages.length + extra,
+              itemBuilder: (context, index) {
+                if (isStreamingHere && index == 0) {
+                  return const _StreamingMessage(key: ValueKey('streaming'));
+                }
+                final i = lastIndex - (index - extra);
+                final m = messages[i];
+                return MessageTile(
+                  key: ValueKey(m.id),
+                  message: m,
+                  animate:
+                      m.isUser &&
+                      now.difference(m.createdAt) < const Duration(seconds: 2),
+                  onRetry: i == lastIndex && m.hasError ? widget.onRetry : null,
+                );
+              },
             );
           },
         ),

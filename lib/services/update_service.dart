@@ -71,13 +71,19 @@ class UpdateService {
     final tag = json['tag_name'] as String? ?? '';
     final latest = int.tryParse(tag.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
 
-    // На Android сразу качаем APK. На iPhone файл ставится только через
-    // компьютер (Sideloadly), поэтому открываем страницу релиза.
+    // Файл для своей платформы. На iPhone .ipa ставится через SideStore,
+    // поэтому там открываем страницу релиза.
+    final wanted = switch (defaultTargetPlatform) {
+      TargetPlatform.android => '.apk',
+      TargetPlatform.windows => 'windows.zip',
+      TargetPlatform.macOS => 'macos.zip',
+      _ => null,
+    };
     String? downloadUrl;
-    if (defaultTargetPlatform == TargetPlatform.android) {
+    if (wanted != null) {
       for (final asset in (json['assets'] as List? ?? const [])) {
         final name = (asset as Map)['name'] as String? ?? '';
-        if (name.endsWith('.apk')) {
+        if (name.endsWith(wanted)) {
           downloadUrl = asset['browser_download_url'] as String?;
           break;
         }

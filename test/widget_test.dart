@@ -56,6 +56,27 @@ void main() {
     expect(repo.loadAll(), hasLength(1));
   });
 
+  testWidgets('ПК: боковая панель с чатами открыта постоянно', (tester) async {
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          chatRepositoryProvider.overrideWithValue(_MemoryChatRepository()),
+          initialSettingsProvider.overrideWithValue(const AppSettings()),
+        ],
+        child: const AiChatApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Новый чат'), findsOneWidget);
+    expect(find.text('Настройки'), findsOneWidget);
+    expect(find.byTooltip('Меню'), findsNothing);
+  });
+
   testWidgets('Markdown: блок кода с кнопкой «Копировать»', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
