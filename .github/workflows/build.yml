@@ -1,15 +1,23 @@
 name: Сборка ИИ Чат (APK + IPA)
 
+# Каждый push в main собирает APK и IPA и публикует их в Releases.
+# Приложение проверяет обновления по номеру сборки (github.run_number).
+
 on:
   push:
     branches:
       - '**'
-    tags:
-      - 'v*'
   workflow_dispatch:
 
 permissions:
   contents: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BUILD_NUMBER: ${{ github.run_number }}
 
 jobs:
   android:
@@ -33,22 +41,34 @@ jobs:
       - run: flutter analyze
       - run: flutter test
 
-      - name: Сборка релизного APK
-        run: flutter build apk --release
+      # Постоянный ключ подписи из секретов репозитория (если они заданы).
+      # Нужен, чтобы новые версии ставились поверх старых без удаления.
+      - name: Ключ подписи
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::warning::Секрет ANDROID_KEYSTORE_BASE64 не задан — APK подписан временным ключом"
+            exit 0
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > android/release.jks
+          {
+            echo "storePassword=$KEYSTORE_PASSWORD"
+            echo "keyPassword=$KEYSTORE_PASSWORD"
+            echo "keyAlias=aichat"
+            echo "storeFile=../release.jks"
+          } > android/key.properties
 
-      - name: Переименование файла
-        run: cp build/app/outputs/flutter-apk/app-release.apk build/ai-chat.apk
+      - name: Сборка релизного APK
+        run: flutter build apk --release --build-number=$BUILD_NUMBER
+
+      - run: cp build/app/outputs/flutter-apk/app-release.apk build/ai-chat.apk
 
       - uses: actions/upload-artifact@v4
         with:
           name: ai-chat-android-apk
           path: build/ai-chat.apk
-
-      - name: Публикация в Releases (для тегов v*)
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: build/ai-chat.apk
 
   ios:
     name: iOS IPA (без подписи)
@@ -65,7 +85,7 @@ jobs:
       - run: flutter pub get
 
       - name: Сборка iOS без подписи
-        run: flutter build ios --release --no-codesign
+        run: flutter build ios --release --no-codesign --build-number=$BUILD_NUMBER
 
       - name: Упаковка в IPA
         run: |
@@ -78,8 +98,25 @@ jobs:
           name: ai-chat-ios-ipa-unsigned
           path: build/ai-chat-unsigned.ipa
 
-      - name: Публикация в Releases (для тегов v*)
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
+  release:
+    name: Публикация в Releases
+    needs: [android, ios]
+    # iOS может упасть — APK всё равно публикуем.
+    if: ${{ always() && github.ref == 'refs/heads/main' && needs.android.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
         with:
-          files: build/ai-chat-unsigned.ipa
+          path: dist
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          name: Версия 1.0.0 (сборка ${{ github.run_number }})
+          make_latest: 'true'
+          body: |
+            **Android:** скачайте `ai-chat.apk` на телефон и откройте его.
+            **iPhone:** скачайте `ai-chat-unsigned.ipa` на компьютер и установите через Sideloadly.
+          files: dist/*

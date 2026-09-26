@@ -9,6 +9,7 @@ import '../providers/settings_provider.dart';
 import '../services/ai/ai_exception.dart';
 import '../services/ai/ai_provider_factory.dart';
 import '../theme/app_theme.dart';
+import '../widgets/update_section.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -271,6 +272,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               child: const Text('Сохранить'),
             ),
             const SizedBox(height: 40),
+            const _SectionTitle('Обновления'),
+            const UpdateSection(),
+            const SizedBox(height: 24),
             const _SectionTitle('Данные'),
             OutlinedButton.icon(
               onPressed: _clearAll,

@@ -6,6 +6,9 @@
 class AppConfig {
   static const appName = 'ИИ Чат';
 
+  /// Репозиторий GitHub, где публикуются обновления (Releases).
+  static const githubRepo = 'rachimanna/-ai-chat';
+
   /// Базовый системный промпт. Сюда добавляется «Расскажи о себе».
   static const baseSystemPrompt =
       'Ты — полезный, дружелюбный ИИ-ассистент. Отвечай на языке пользователя '
