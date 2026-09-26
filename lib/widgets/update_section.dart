@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -87,6 +88,12 @@ class _UpdateSectionState extends State<UpdateSection> {
 
   @override
   Widget build(BuildContext context) {
+    if (kIsWeb) {
+      return const Text(
+        'Веб-версия обновляется автоматически при каждом открытии.',
+        style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+      );
+    }
     return Material(
       color: AppColors.surface,
       borderRadius: BorderRadius.circular(14),

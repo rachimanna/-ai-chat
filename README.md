@@ -35,6 +35,16 @@ tool/rename_app.dart        — смена названия приложения
 assets/icon/                — иконка приложения
 ```
 
+## Установка
+
+- **Android:** скачайте `ai-chat.apk` со страницы
+  [Releases](https://github.com/rachimanna/-ai-chat/releases/latest) прямо на телефон и откройте.
+- **iPhone без компьютера:** откройте в Safari https://rachimanna.github.io/-ai-chat/,
+  нажмите «Поделиться» → «На экран „Домой“». Появится иконка, приложение
+  открывается на весь экран и обновляется само.
+- **iPhone как нативное приложение:** `ai-chat-unsigned.ipa` из Releases через
+  Sideloadly на компьютере (подпись бесплатным Apple ID действует 7 дней).
+
 ## Как получить бесплатный ключ Gemini
 
 1. Откройте https://aistudio.google.com/apikey и войдите в Google-аккаунт.
